@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}The Most Dangerous Writing Application{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="prompt-container">
+        <h2>Writing Prompt:</h2>
+        <p id="prompt-text">{{ prompt }}</p>
+        <form method="POST">
+            <button type="submit" name="generate" id="generate-btn">Generate New Prompt</button>
+        </form>
+    </div>
+
+    <div class="writing-instructions">
+        <p>Write the story based on the prompt above. If you stop writing for more than 5 seconds, the words will start to disappear!</p>
+    </div>
+
+    <div class="prompt-container">
+        <div id="writing-area">
+            <form id="writing-form" method="POST">
+                <textarea name="user_input" id="user-input" rows="10">{{ current_text }}</textarea>
+                <p>Words left: <span id="words-left">{{ words_left }}</span></p>
+                <p>Time left: <span id="time-left">5</span> seconds</p>
+            </form>
+        </div>
+    </div>
+
+    <form action="{{ url_for('save') }}" method="POST">
+        <button type="submit" id="save-btn">Save Story</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userInput = document.getElementById('user-input');
+        const wordsLeft = document.getElementById('words-left');
+        const timeLeft = document.getElementById('time-left');
+        let typingTimer;
+        let disappearTimer;
+        const doneTypingInterval = 1000;
+        const disappearInterval = 5000;
+        let lastSentText = userInput.value;
+
+        userInput.focus();
+        
+        userInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (e.target !== userInput) {
+                userInput.focus();
+            }
+        });
+
+        userInput.addEventListener('input', function() {
+            clearTimeout(typingTimer);
+            clearTimeout(disappearTimer);
+            typingTimer = setTimeout(doneTyping, doneTypingInterval);
+            startDisappearTimer();
+        });
+
+        function doneTyping() {
+            if (userInput.value !== lastSentText) {
+                lastSentText = userInput.value;
+                fetch('/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'user_input': userInput.value
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.words_left) {
+                        wordsLeft.textContent = data.words_left;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+
+        function startDisappearTimer() {
+            let secondsLeft = 5;
+            timeLeft.textContent = secondsLeft;
+
+            function updateTimer() {
+                secondsLeft--;
+                timeLeft.textContent = secondsLeft;
+                if (secondsLeft > 0) {
+                    disappearTimer = setTimeout(updateTimer, 1000);
+                } else {
+                    removeLastWord();
+                }
+            }
+
+            disappearTimer = setTimeout(updateTimer, 1000);
+        }
+
+        function removeLastWord() {
+            let words = userInput.value.trim().split(/\s+/);
+            if (words.length > 0) {
+                words.pop();
+                userInput.value = words.join(' ');
+                doneTyping();
+                startDisappearTimer();
+            }
+        }
+
+        startDisappearTimer();
+    });
+</script>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .content-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    #writing-area {
+        width: 100%;
+    }
+
+    #user-input {
+        width: 100%;
+        box-sizing: border-box;
+        resize: vertical;
+        min-height: 200px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    #save-btn {
+        background-color: #28a745;
+        color: #fff;
+    }
+</style>
+{% endblock %}

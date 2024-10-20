@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Writing Session{% endblock %}
+
+{% block content %}
+<div class="prompt-container">
+    <div id="writing-area">
+        <form method="POST">
+            <textarea name="user_input" id="user-input" rows="10" cols="50" autofocus>{{ current_text }}</textarea>
+            <button type="submit">Update</button>
+        </form>
+    </div>
+</div>
+
+<div class="prompt-container">
+    <div id="disappearing-text-area">
+        <h3>Your Disappearing Text:</h3>
+        <p id="disappearing-text">{{ current_text }}</p>
+        <p>Words left: <span id="words-left">{{ words_left }}</span></p>
+    </div>
+</div>
+
+<form action="{{ url_for('save') }}" method="POST">
+    <button type="submit" id="save-btn">Save Story</button>
+</form>
+{% endblock %}
